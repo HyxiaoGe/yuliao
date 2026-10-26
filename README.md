@@ -25,6 +25,10 @@ cp .env.example .env.local
 # 填入 EXPO_PUBLIC_ARK_API_KEY，按控制台"开通管理"确认 EXPO_PUBLIC_ARK_MODEL
 ```
 
+Key 只能写在 `.env.local`，不要写进 `.env.example`（后者会提交到仓库）。
+
+深度思考默认关闭，实测 Seed 2.0 Mini 开启时首字约 2.4s，关闭后约 0.7s；需要时设 `EXPO_PUBLIC_ARK_THINKING=1`。
+
 > `EXPO_PUBLIC_*` 会打进客户端包。原型阶段直连方舟可以接受；正式版本由轻量后端持有 Key，
 > APP 只需把 `EXPO_PUBLIC_ARK_BASE_URL` 指向后端（接口保持 OpenAI 兼容格式即可，APP 代码不用改）。
 
@@ -32,9 +36,16 @@ cp .env.example .env.local
 
 语音识别是原生模块，**不能用 Expo Go**，需要 development build，并且**必须真机**（模拟器没有麦克风和语音识别）。
 
+首次准备 iOS 环境（只需一次）：
+
+1. App Store 安装 Xcode，打开一次同意许可并安装 iOS 平台组件
+2. `sudo xcode-select -s /Applications/Xcode.app`
+3. `brew install cocoapods`
+4. iPhone 连接电脑并信任，手机上开启开发者模式（设置 > 隐私与安全性）
+
 ```bash
 npm install
-npm run ios        # 需要安装完整 Xcode（不是 Command Line Tools），首次会自动跑 pod install
+npm run ios        # 首次会生成 ios/ 并 pod install，再装到连接的 iPhone
 npm run android    # 需要 Android SDK / 真机
 ```
 
