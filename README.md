@@ -39,13 +39,25 @@ Key 只能写在 `.env.local`，不要写进 `.env.example`（后者会提交到
 首次准备 iOS 环境（只需一次）：
 
 1. App Store 安装 Xcode，打开一次同意许可并安装 iOS 平台组件
-2. `sudo xcode-select -s /Applications/Xcode.app`
+2. `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`
 3. `brew install cocoapods`
 4. iPhone 连接电脑并信任，手机上开启开发者模式（设置 > 隐私与安全性）
+5. 签名：Xcode > Settings > Accounts 登录 Apple ID（免费 Personal Team 即可）。
+   `app.json` 里的 `ios.appleTeamId` 换成你自己的团队 ID，Bundle ID 全球唯一，被占用时换一个。
 
 ```bash
 npm install
-npm run ios        # 首次会生成 ios/ 并 pod install，再装到连接的 iPhone
+npx expo prebuild --platform ios   # 生成 ios/ 并 pod install
+open ios/yuliao.xcworkspace        # 首次签名需要在 Xcode 里完成：选真机，⌘R 安装
+npx expo start --dev-client        # 启动 Metro；App 打开后在启动页选中本机，或手动填 http://<Mac 局域网 IP>:8081
+```
+
+> 命令行 `npm run ios` 在首次签名时拿不到 Xcode 里的 Apple ID 会话，会报 "No profiles"；
+> 用 Xcode 跑过一次、描述文件生成后，之后再用 `npm run ios` 即可。
+> 免费签名 7 天过期，过期后在 Xcode 里重新 ⌘R 一次。
+> 手机与 Mac 必须在同一 Wi-Fi。
+
+```bash
 npm run android    # 需要 Android SDK / 真机
 ```
 
@@ -63,6 +75,10 @@ npm run typecheck
 npm run lint
 npm test
 ```
+
+## 真机验证记录
+
+2026-10-27 在 iPhone（iOS 26.3）上验证通过：按住说话识别中文、文字填入输入框、豆包流式回复。
 
 ## 已知边界
 
