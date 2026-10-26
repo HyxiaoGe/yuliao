@@ -1,0 +1,9 @@
+services:
+  yuliao-server:
+    build: .
+    image: yuliao-server
+    container_name: yuliao-server
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8787:8787"

@@ -2,7 +2,7 @@
 
 一个极简的语音聊天原型：**按住说话，松开转文字**，识别结果填入输入框，确认后发送给豆包大模型，回复流式显示在聊天列表里。
 
-技术栈：Expo SDK 58 / React Native / TypeScript，语音识别用设备端能力（`expo-speech-recognition`），大模型走火山方舟 Chat Completions 流式接口。
+技术栈：Expo SDK 58 / React Native / TypeScript，语音识别用设备端能力（`expo-speech-recognition`），大模型走火山方舟 Chat Completions 流式接口，经由 `server/` 里的轻量 Node 后端转发（Key 只在服务器上）。
 
 ## 目录
 
@@ -16,21 +16,22 @@ src/services/asr.ts          语音识别抽象 + 设备端实现（后续接豆
 src/hooks/useHoldToTalk.ts   按住说话状态机
 src/components/              消息气泡、按住说话按钮、输入区
 src/screens/ChatScreen.tsx   聊天页
+server/                      轻量后端：持有方舟 Key，转发流式请求（见 server/README.md）
 ```
 
 ## 配置
 
 ```bash
 cp .env.example .env.local
-# 填入 EXPO_PUBLIC_ARK_API_KEY，按控制台"开通管理"确认 EXPO_PUBLIC_ARK_MODEL
+# EXPO_PUBLIC_CHAT_BASE_URL 指向后端（…/v1），EXPO_PUBLIC_CHAT_TOKEN 填后端 APP_TOKENS 之一
 ```
 
-Key 只能写在 `.env.local`，不要写进 `.env.example`（后者会提交到仓库）。
+`EXPO_PUBLIC_*` 都会打进客户端包，所以 App 里只放后端地址和 App token，方舟 Key 只存在于 `server/.env`。
+仅本地调试时可直连方舟：BASE_URL 填方舟地址，TOKEN 填方舟 Key，并填 `EXPO_PUBLIC_CHAT_MODEL`。
 
-深度思考默认关闭，实测 Seed 2.0 Mini 开启时首字约 2.4s，关闭后约 0.7s；需要时设 `EXPO_PUBLIC_ARK_THINKING=1`。
+真实值只能写在 `.env.local`，不要写进 `.env.example`（后者会提交到仓库）。
 
-> `EXPO_PUBLIC_*` 会打进客户端包。原型阶段直连方舟可以接受；正式版本由轻量后端持有 Key，
-> APP 只需把 `EXPO_PUBLIC_ARK_BASE_URL` 指向后端（接口保持 OpenAI 兼容格式即可，APP 代码不用改）。
+深度思考默认关闭，实测 Seed 2.0 Mini 开启时首字约 2.4s，关闭后约 0.7s；需要时设 `EXPO_PUBLIC_CHAT_THINKING=1`。
 
 ## 运行
 
