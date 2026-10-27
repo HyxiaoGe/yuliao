@@ -46,6 +46,14 @@
           "microphonePermission": "语聊需要使用麦克风来录制你的语音",
           "speechRecognitionPermission": "语聊需要使用语音识别把你说的话转成文字"
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "语聊需要使用麦克风来录制你的语音",
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
       ]
     ]
   }

@@ -10,6 +10,8 @@ import type { TalkZone } from '../components/VoiceBar';
 import { useHoldToTalk, type TalkIntent } from '../hooks/useHoldToTalk';
 import { assertLlmConfigured } from '../config';
 import { api } from '../services/api';
+import { SentenceSplitter, stripForSpeech } from '../services/sentences';
+import { speech } from '../services/tts';
 import { localId, type Conversation, type Message } from '../types';
 
 export function ChatScreen() {
@@ -22,6 +24,16 @@ export function ChatScreen() {
   const [input, setInput] = useState('');
   const [inputMode, setInputMode] = useState<InputMode>('voice');
   const [talkZone, setTalkZone] = useState<TalkZone>('none');
+  /** 自动朗读助手回复 */
+  const [autoRead, setAutoRead] = useState(true);
+  const autoReadRef = useRef(true);
+  const toggleAutoRead = useCallback(() => {
+    setAutoRead((v) => {
+      autoReadRef.current = !v;
+      if (v) speech.stop();
+      return !v;
+    });
+  }, []);
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -48,6 +60,7 @@ export function ChatScreen() {
   const talk = useHoldToTalk({ onFinal: onTalkFinal, onError: showToast });
   const { pressIn: talkPressIn } = talk;
   const onTalkPressIn = useCallback(() => {
+    speech.stop();
     draftBaseRef.current = input;
     talkPressIn();
   }, [input, talkPressIn]);
@@ -94,10 +107,17 @@ export function ChatScreen() {
     };
   }, [openConversation, showToast]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      speech.stop();
+    },
+    [],
+  );
 
   const newConversation = useCallback(() => {
     if (sending) return;
+    speech.stop();
     setCurrentId(null);
     setMessages([]);
     setListVisible(false);
@@ -106,7 +126,10 @@ export function ChatScreen() {
   const selectConversation = useCallback(
     (id: string) => {
       setListVisible(false);
-      if (id !== currentId && !sending) openConversation(id);
+      if (id !== currentId && !sending) {
+        speech.stop();
+        openConversation(id);
+      }
     },
     [currentId, sending, openConversation],
   );
@@ -139,6 +162,14 @@ export function ChatScreen() {
     sendingRef.current = true;
     setSending(true);
     if (clearInput) setInput('');
+    speech.stop();
+    const splitter = autoReadRef.current ? new SentenceSplitter() : null;
+    const speak = (sentences: string[]) => {
+      for (const sen of sentences) {
+        const t = stripForSpeech(sen);
+        if (t) speech.enqueue(t);
+      }
+    };
     const userMsg: Message = { id: localId(), role: 'user', content: text };
     const assistantId = localId();
     setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', streaming: true }]);
@@ -175,10 +206,13 @@ export function ChatScreen() {
         (delta) => {
           pending += delta;
           if (!flushTimer) flushTimer = setTimeout(flush, 40);
+          if (splitter) speak(splitter.push(delta));
         },
         controller.signal,
       );
       finish({});
+      const rest = splitter?.flush();
+      if (rest) speak([rest]);
     } catch (err: any) {
       const aborted = controller.signal.aborted || err?.name === 'AbortError';
       finish({ error: aborted ? undefined : err?.message ?? '请求失败' });
@@ -195,7 +229,10 @@ export function ChatScreen() {
     sendTextRef.current = sendText;
   }, [sendText]);
   const send = useCallback(() => sendText(input, true), [sendText, input]);
-  const stop = useCallback(() => abortRef.current?.abort(), []);
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+    speech.stop();
+  }, []);
 
   const reversed = useMemo(() => [...messages].reverse(), [messages]);
   const currentTitle = conversations.find((c) => c.id === currentId)?.title ?? (currentId ? '对话' : '新对话');
@@ -209,6 +246,9 @@ export function ChatScreen() {
         <Text style={styles.title} numberOfLines={1}>
           {currentTitle}
         </Text>
+        <Pressable onPress={toggleAutoRead} hitSlop={12} style={styles.headerBtn} accessibilityLabel={autoRead ? '关闭自动朗读' : '开启自动朗读'}>
+          <Text style={styles.headerEmoji}>{autoRead ? '🔊' : '🔇'}</Text>
+        </Pressable>
         <Pressable onPress={newConversation} hitSlop={12} style={[styles.headerBtn, styles.headerBtnRight]} disabled={sending} accessibilityLabel="新对话">
           <NewChatIcon color={sending ? '#B0B0B5' : '#1A1A1A'} />
         </Pressable>
@@ -285,6 +325,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   headerBtn: { width: 44, height: 32, justifyContent: 'center' },
+  headerEmoji: { fontSize: 20, textAlign: 'center' },
   headerBtnRight: { alignItems: 'flex-end' },
   title: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', color: '#1A1A1A' },
   listContent: { paddingVertical: 8, flexGrow: 1 },

@@ -7,6 +7,7 @@ import {
   listMessages, recentTurns, insertMessage, touchConversation, type Db,
 } from './db.ts';
 import { SseAccumulator } from './sse.ts';
+import { synthesize } from './tts.ts';
 import { isUuid, isValidDeviceId, titleFromContent, validateCreateConversation, validateSendMessage, type ArkChatRequest } from './validate.ts';
 
 const cfg = loadConfig();
@@ -179,6 +180,40 @@ async function handleSendMessage(ctx: Ctx, conversationId: string) {
   );
 }
 
+/** POST /v1/tts {text} -> audio/mpeg（整段 mp3，边合成边下发） */
+async function handleTts({ req, res, cfg, tokenId }: Ctx) {
+  if (!cfg.ttsApiKey) throw new HttpError(503, '服务端未配置语音合成', 'not_configured');
+  const body: any = await readJson(req);
+  const text = typeof body?.text === 'string' ? body.text.trim() : '';
+  if (!text) throw new HttpError(400, 'text 不能为空');
+  if (text.length > cfg.ttsMaxChars) throw new HttpError(400, `text 不能超过 ${cfg.ttsMaxChars} 字`);
+
+  const controller = new AbortController();
+  req.on('close', () => controller.abort());
+  const started = Date.now();
+  let bytes = 0;
+  let usage: number | null = null;
+  try {
+    usage = await synthesize(
+      { apiKey: cfg.ttsApiKey, resourceId: cfg.ttsResourceId, speaker: cfg.ttsSpeaker, text, signal: controller.signal },
+      (buf) => {
+        if (!res.headersSent) res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' });
+        bytes += buf.length;
+        res.write(buf);
+      },
+    );
+  } catch (e: any) {
+    if (controller.signal.aborted) return;
+    if (res.headersSent) throw e;
+    const status = typeof e?.status === 'number' ? e.status : 502;
+    // 上游 401/403 是服务端 Key 的问题，对客户端统一是上游错误
+    throw new HttpError(status >= 500 || status === 401 || status === 403 ? 502 : status, `语音合成失败：${e?.message ?? '未知错误'}`, 'upstream_error');
+  }
+  if (!res.headersSent) throw new HttpError(502, '上游未返回音频', 'upstream_error');
+  res.end();
+  console.log(`[tts] token=${tokenId} chars=${text.length} billed=${usage ?? '?'} bytes=${bytes} ${Date.now() - started}ms`);
+}
+
 // ---------- 分发 ----------
 
 const server = createServer(async (req, res) => {
@@ -209,6 +244,7 @@ const server = createServer(async (req, res) => {
       if (seg.length === 3 && seg[2] === 'messages' && req.method === 'GET') return await handleListMessages(ctx, seg[1]);
       if (seg.length === 3 && seg[2] === 'messages' && req.method === 'POST') return await handleSendMessage(ctx, seg[1]);
     }
+    if (seg[0] === 'tts' && seg.length === 1 && req.method === 'POST') return await handleTts(ctx);
     throw new HttpError(404, 'Not found', 'not_found');
   } catch (e: any) {
     if (res.headersSent) {

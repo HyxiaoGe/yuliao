@@ -13,6 +13,8 @@ src/types.ts                 消息类型
 src/services/api.ts          后端接口：对话列表/消息/流式发送
 src/services/device.ts       设备 ID（首次生成，存 Documents 目录，服务端按它归属对话）
 src/services/sse.ts          SSE 行解析（纯函数，有单测）
+src/services/sentences.ts    流式文本切句 + 去 Markdown（纯函数，有单测）
+src/services/tts.ts          朗读队列：句子送后端合成，expo-audio 顺序播放
 src/services/asr.ts          语音识别抽象 + 设备端实现（后续接豆包 ASR 在这里换实现）
 src/hooks/useHoldToTalk.ts   按住说话状态机（实时文字、音量、上滑取消）
 src/components/              消息气泡、输入区（键盘/语音二合一）、按住说话长条与录音浮层、历史对话抽屉、View 画的图标
@@ -90,3 +92,5 @@ npm test
 - 对话和消息存在服务端 Postgres，按设备 ID 归属；卸载重装会生成新设备 ID，旧对话不再可见（数据仍在服务端，做登录后可迁移）。
 - 模型上下文由服务端取最近 20 条消息拼接（`HISTORY_LIMIT`），App 不再发送历史。
 - 离线时无法查看历史（没有本地缓存）。
+- 助手回复默认自动朗读（顶部 🔊 可关）：回复流式到达时按句切开送后端合成（豆包语音合成 2.0），
+  音频缓存在本地按顺序播放；按住说话、点停止、切换对话都会打断朗读。后端未配置 TTS_API_KEY 时静默跳过。

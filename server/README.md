@@ -14,6 +14,7 @@
 | DELETE | /v1/conversations/:id | 删除对话及其消息 |
 | GET | /v1/conversations/:id/messages | 该对话的消息（时间正序，最多 500 条） |
 | POST | /v1/conversations/:id/messages | 发送一条消息 `{ "content", "thinking"?, "model"? }`，SSE 流式返回 OpenAI 格式 chunk |
+| POST | /v1/tts | `{ "text" }` → `audio/mpeg`，豆包语音合成 2.0，边合成边下发；未配置 TTS_API_KEY 时 503 |
 
 发送流程：落库用户消息 → 取最近 `HISTORY_LIMIT` 条拼上下文 → 流式转发方舟 → 边转发边累积 → 落库助手回复。客户端中途断开时，已生成的部分照常落库并同步取消上游。
 `thinking` 默认 disabled，显式 `{ "type": "enabled" }` 才开；`model` 仅白名单内生效，否则用服务端默认；其余字段丢弃。
@@ -27,6 +28,7 @@
 | 404 | 对话不存在或不属于该设备 |
 | 429 | 超过 RATE_LIMIT_PER_MIN，带 Retry-After |
 | 502 | 上游不可达或上游返回 5xx / 401（服务端 Key 问题） |
+| 503 | 该功能未在服务端配置（如 TTS_API_KEY 为空） |
 
 ## 数据
 

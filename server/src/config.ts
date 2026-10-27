@@ -35,6 +35,11 @@ export function loadConfig() {
     rateLimitPerMin: num('RATE_LIMIT_PER_MIN', 30),
     maxMessages: num('MAX_MESSAGES', 40),
     maxChars: num('MAX_CHARS', 20000),
+    /** 豆包语音合成（可选）：为空时 /v1/tts 返回 503 */
+    ttsApiKey: process.env.TTS_API_KEY ?? '',
+    ttsResourceId: process.env.TTS_RESOURCE_ID ?? 'seed-tts-2.0',
+    ttsSpeaker: process.env.TTS_SPEAKER ?? 'zh_female_vv_uranus_bigtts',
+    ttsMaxChars: num('TTS_MAX_CHARS', 600),
   };
 }
 
