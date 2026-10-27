@@ -1,4 +1,6 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
+import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
+import { Platform } from 'react-native';
 import { File, Paths } from 'expo-file-system';
 import { fetch } from 'expo/fetch';
 import { config } from '../config';
@@ -28,11 +30,22 @@ class SpeechQueue {
   }
 
   /**
-   * 切回纯播放会话。语音识别会把 iOS 音频会话设成 playAndRecord + measurement，
-   * 识别结束后仍留在该状态，扬声器输出会明显偏小，所以每轮播放前都重新设置一次。
+   * 切回纯播放会话。语音识别会把 iOS 音频会话设成 playAndRecord + measurement 模式，
+   * 识别结束后仍留在该状态，measurement 模式会明显压低扬声器输出。
+   * expo-audio 带 duckOthers 时调用的是不带 mode 的 setCategory，清不掉 measurement，
+   * 所以在 iOS 上再用识别库的接口把 category/mode/options 一次设全。
    */
-  private applyPlaybackMode() {
-    return setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false, interruptionMode: 'duckOthers' }).catch(() => {});
+  private async applyPlaybackMode() {
+    await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false, interruptionMode: 'doNotMix' }).catch(() => {});
+    if (Platform.OS === 'ios') {
+      try {
+        ExpoSpeechRecognitionModule.setCategoryIOS({ category: 'playback', categoryOptions: ['duckOthers'], mode: 'spokenAudio' });
+        const st = ExpoSpeechRecognitionModule.getAudioSessionCategoryAndOptionsIOS();
+        console.log(`[tts] audio session ${st.category}/${st.mode} [${st.categoryOptions.join(',')}]`);
+      } catch (e) {
+        console.warn('[tts] set audio session failed', e);
+      }
+    }
   }
 
   /** 记录一轮回复的起点，用于打印首句音频延迟 */
