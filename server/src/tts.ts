@@ -99,7 +99,8 @@ export async function synthesize(opts: TtsOptions, onAudio: (bytes: Buffer) => v
     } catch {
       return;
     }
-    if (chunk.code !== 0) throw { status: 502, message: chunk.message ?? `上游合成失败 code=${chunk.code}` } satisfies TtsError;
+    // 20000000 是上游的结束标记（message=OK，data=null），不是错误
+    if (chunk.code !== 0 && chunk.code !== 20000000) throw { status: 502, message: chunk.message || `上游合成失败 code=${chunk.code}` } satisfies TtsError;
     if (chunk.data) onAudio(Buffer.from(chunk.data, 'base64'));
     if (typeof chunk.usage?.text_words === 'number') usage = chunk.usage.text_words;
   };
