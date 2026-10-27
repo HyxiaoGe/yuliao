@@ -9,7 +9,7 @@
 | GET | /healthz | 健康检查 |
 | POST | /v1/chat/completions | OpenAI 兼容，SSE 流式透传。需 `Authorization: Bearer <APP_TOKEN>` |
 
-请求体只放行 `messages`、`stream`、`thinking`、`model`（仅白名单内生效，否则用服务端默认），其余字段丢弃。错误统一为 `{ "error": { "message", "type" } }`，App 直接展示 message。
+请求体只放行 `messages`、`stream`、`thinking`（默认 disabled，显式 enabled 才开）、`model`（仅白名单内生效，否则用服务端默认），其余字段丢弃。错误统一为 `{ "error": { "message", "type" } }`，App 直接展示 message。
 
 | 状态 | 含义 |
 |---|---|

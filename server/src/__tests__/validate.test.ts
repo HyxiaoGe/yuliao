@@ -16,15 +16,16 @@ const bad = (body: unknown) => {
 
 test('合法请求：模型按白名单，其余字段丢弃，stream 默认 true', () => {
   const v = ok({ messages: [{ role: 'user', content: 'hi' }], temperature: 2, max_tokens: 99999 });
-  assert.deepEqual(v, { model: 'default-model', messages: [{ role: 'user', content: 'hi' }], stream: true });
+  assert.deepEqual(v, { model: 'default-model', messages: [{ role: 'user', content: 'hi' }], stream: true, thinking: { type: 'disabled' } });
   assert.equal(ok({ model: 'other-model', messages: [{ role: 'user', content: 'hi' }] }).model, 'other-model');
   assert.equal(ok({ model: 'evil-model', messages: [{ role: 'user', content: 'hi' }] }).model, 'default-model');
   assert.equal(ok({ messages: [{ role: 'user', content: 'hi' }], stream: false }).stream, false);
 });
 
-test('thinking 只接受 enabled/disabled', () => {
-  assert.deepEqual(ok({ messages: [{ role: 'user', content: 'x' }], thinking: { type: 'disabled' } }).thinking, { type: 'disabled' });
-  assert.equal(ok({ messages: [{ role: 'user', content: 'x' }], thinking: { type: 'auto' } }).thinking, undefined);
+test('thinking 默认关闭，只有显式 enabled 才开启', () => {
+  assert.deepEqual(ok({ messages: [{ role: 'user', content: 'x' }] }).thinking, { type: 'disabled' });
+  assert.deepEqual(ok({ messages: [{ role: 'user', content: 'x' }], thinking: { type: 'enabled' } }).thinking, { type: 'enabled' });
+  assert.deepEqual(ok({ messages: [{ role: 'user', content: 'x' }], thinking: { type: 'auto' } }).thinking, { type: 'disabled' });
 });
 
 test('非法请求', () => {

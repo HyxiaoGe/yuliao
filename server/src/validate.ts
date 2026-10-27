@@ -6,7 +6,7 @@ export type ChatRequest = {
   model: string;
   messages: ChatTurn[];
   stream: boolean;
-  thinking?: { type: 'enabled' | 'disabled' };
+  thinking: { type: 'enabled' | 'disabled' };
 };
 
 const ROLES = new Set(['system', 'user', 'assistant']);
@@ -39,10 +39,9 @@ export function validateChatRequest(
 
   const model = typeof b.model === 'string' && cfg.allowedModels.has(b.model) ? b.model : cfg.arkModel;
 
-  const out: ChatRequest = { model, messages, stream: b.stream !== false };
+  // 深度思考默认关闭：聊天场景首字快 3 倍以上；客户端显式传 enabled 才开启
   const thinking = b.thinking as Record<string, unknown> | undefined;
-  if (thinking && typeof thinking === 'object' && (thinking.type === 'enabled' || thinking.type === 'disabled')) {
-    out.thinking = { type: thinking.type };
-  }
+  const thinkingType = thinking && typeof thinking === 'object' && thinking.type === 'enabled' ? 'enabled' : 'disabled';
+  const out: ChatRequest = { model, messages, stream: b.stream !== false, thinking: { type: thinkingType } };
   return { ok: true, value: out };
 }
