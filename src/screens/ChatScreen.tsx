@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Composer, type InputMode } from '../components/Composer';
-import { ConversationList } from '../components/ConversationList';
+import { ConversationDrawer } from '../components/ConversationDrawer';
+import { MenuIcon, NewChatIcon } from '../components/Icons';
 import { MessageBubble } from '../components/MessageBubble';
 import { VoiceOverlay } from '../components/VoiceOverlay';
 import type { TalkZone } from '../components/VoiceBar';
@@ -202,14 +203,14 @@ export function ChatScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <Pressable onPress={() => setListVisible(true)} hitSlop={12} style={styles.headerBtn}>
-          <Text style={styles.headerBtnText}>历史</Text>
+        <Pressable onPress={() => setListVisible(true)} hitSlop={12} style={styles.headerBtn} accessibilityLabel="历史对话">
+          <MenuIcon />
         </Pressable>
         <Text style={styles.title} numberOfLines={1}>
           {currentTitle}
         </Text>
-        <Pressable onPress={newConversation} hitSlop={12} style={[styles.headerBtn, styles.headerBtnRight]} disabled={sending}>
-          <Text style={[styles.headerBtnText, sending && styles.disabledText]}>新对话</Text>
+        <Pressable onPress={newConversation} hitSlop={12} style={[styles.headerBtn, styles.headerBtnRight]} disabled={sending} accessibilityLabel="新对话">
+          <NewChatIcon color={sending ? '#B0B0B5' : '#1A1A1A'} />
         </Pressable>
       </View>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -249,15 +250,15 @@ export function ChatScreen() {
           bottomInset={insets.bottom}
         />
       </KeyboardAvoidingView>
-      <VoiceOverlay state={talk.state} transcript={talk.transcript} volume={talk.volume} zone={talkZone} />
-      <ConversationList
-        visible={listVisible}
+      <ConversationDrawer
+        open={listVisible}
+        onOpenChange={setListVisible}
         conversations={conversations}
         currentId={currentId}
         onSelect={selectConversation}
         onDelete={deleteConversation}
-        onClose={() => setListVisible(false)}
       />
+      <VoiceOverlay state={talk.state} transcript={talk.transcript} volume={talk.volume} zone={talkZone} />
     </View>
   );
 }
@@ -280,10 +281,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 12,
   },
-  headerBtn: { width: 56 },
+  headerBtn: { width: 44, height: 32, justifyContent: 'center' },
   headerBtnRight: { alignItems: 'flex-end' },
-  headerBtnText: { fontSize: 16, color: '#1E6FFF' },
-  disabledText: { color: '#B9CCF5' },
   title: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', color: '#1A1A1A' },
   listContent: { paddingVertical: 8, flexGrow: 1 },
   // inverted 列表里空态会被翻转，再翻回来
