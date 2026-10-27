@@ -74,7 +74,7 @@ class SpeechQueue {
   }
 
   private async synthesize(text: string, gen: number): Promise<File | null> {
-    const file = new File(Paths.cache, `tts-${hash(text)}.mp3`);
+    const file = new File(Paths.cache, `tts-v2-${hash(text)}.mp3`);
     try {
       if (file.exists && file.size > 0) return file;
       const resp = await fetch(`${config.chatBaseUrl}/tts`, {

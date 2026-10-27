@@ -40,6 +40,8 @@ export function loadConfig() {
     ttsResourceId: process.env.TTS_RESOURCE_ID ?? 'seed-tts-2.0',
     ttsSpeaker: process.env.TTS_SPEAKER ?? 'zh_female_vv_uranus_bigtts',
     ttsMaxChars: num('TTS_MAX_CHARS', 600),
+    /** 上游 loudness_rate，-50..100，100 为 2 倍音量；豆包默认输出约 -20 LUFS 偏小，默认提到 1.7 倍 */
+    ttsLoudness: Number(process.env.TTS_LOUDNESS ?? 70),
   };
 }
 

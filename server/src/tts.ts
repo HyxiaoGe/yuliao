@@ -52,6 +52,8 @@ export type TtsOptions = {
   resourceId: string;
   speaker: string;
   text: string;
+  /** -50..100 */
+  loudness?: number;
   signal?: AbortSignal;
 };
 
@@ -75,7 +77,7 @@ export async function synthesize(opts: TtsOptions, onAudio: (bytes: Buffer) => v
       req_params: {
         text: opts.text,
         speaker: opts.speaker,
-        audio_params: { format: 'mp3', sample_rate: 24000 },
+        audio_params: { format: 'mp3', sample_rate: 24000, loudness_rate: Math.max(-50, Math.min(100, Math.round(opts.loudness ?? 0))) },
       },
     }),
     signal: opts.signal,

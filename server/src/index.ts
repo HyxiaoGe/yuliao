@@ -195,7 +195,7 @@ async function handleTts({ req, res, cfg, tokenId }: Ctx) {
   let usage: number | null = null;
   try {
     usage = await synthesize(
-      { apiKey: cfg.ttsApiKey, resourceId: cfg.ttsResourceId, speaker: cfg.ttsSpeaker, text, signal: controller.signal },
+      { apiKey: cfg.ttsApiKey, resourceId: cfg.ttsResourceId, speaker: cfg.ttsSpeaker, text, loudness: cfg.ttsLoudness, signal: controller.signal },
       (buf) => {
         if (!res.headersSent) res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' });
         bytes += buf.length;
