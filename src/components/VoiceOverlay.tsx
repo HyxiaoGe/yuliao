@@ -14,6 +14,9 @@ type Props = {
 
 const BARS = [0.45, 0.7, 0.9, 1, 0.9, 0.7, 0.45];
 const ARC_HEIGHT = 150;
+/** 取消/编辑区底边距屏幕底部的距离：对应手指从长条上滑约 90pt 后的位置 */
+const ZONES_BOTTOM = ARC_HEIGHT + 28;
+const ZONE_HEIGHT = 72;
 
 /**
  * 按住说话时的全屏浮层：顶部左右两个"取消 / 编辑"区，中间实时识别气泡，底部一道弧形区域提示松手动作。
@@ -45,7 +48,7 @@ export function VoiceOverlay({ state, transcript, volume, zone }: Props) {
   return (
     <View pointerEvents="none" style={styles.root}>
       {listening ? (
-        <View style={[styles.zones, { top: insets.top + 64 }]}>
+        <View style={[styles.zones, { bottom: ZONES_BOTTOM }]}>
           <View style={[styles.zone, styles.zoneLeft, zone === 'cancel' && styles.zoneActive]}>
             <Text style={[styles.zoneText, zone === 'cancel' && styles.zoneTextActive]}>取消</Text>
           </View>
@@ -55,7 +58,7 @@ export function VoiceOverlay({ state, transcript, volume, zone }: Props) {
         </View>
       ) : null}
 
-      <View style={[styles.bubbleWrap, { bottom: ARC_HEIGHT + 56 }]}>
+      <View style={[styles.bubbleWrap, { bottom: ZONES_BOTTOM + ZONE_HEIGHT + 32, top: insets.top + 24 }]}>
         <View style={[styles.bubble, zone === 'cancel' && styles.bubbleCancel, zone === 'edit' && styles.bubbleEdit]}>
           {listening && zone === 'none' ? (
             <View style={styles.bars}>
@@ -89,7 +92,7 @@ const styles = StyleSheet.create({
   zones: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 28 },
   zone: {
     width: 108,
-    height: 72,
+    height: ZONE_HEIGHT,
     borderRadius: 36,
     backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
@@ -100,7 +103,7 @@ const styles = StyleSheet.create({
   zoneActive: { backgroundColor: '#FFFFFF', transform: [{ scale: 1.08 }] },
   zoneText: { color: 'rgba(255,255,255,0.85)', fontSize: 17, fontWeight: '500' },
   zoneTextActive: { color: '#1A1A1A' },
-  bubbleWrap: { position: 'absolute', left: 24, right: 24, alignItems: 'center' },
+  bubbleWrap: { position: 'absolute', left: 24, right: 24, alignItems: 'center', justifyContent: 'flex-end' },
   bubble: {
     minWidth: 160,
     maxWidth: '100%',
