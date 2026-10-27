@@ -57,6 +57,7 @@ npx expo start --dev-client        # 启动 Metro；App 打开后在启动页选
 > 用 Xcode 跑过一次、描述文件生成后，之后再用 `npm run ios` 即可。
 > 免费签名 7 天过期，过期后在 Xcode 里重新 ⌘R 一次。
 > 手机与 Mac 必须在同一 Wi-Fi。
+> iOS ATS 只放行局域网 IP 的明文 HTTP；`app.json` 已为 `*.dev.seanfield.org` 加了例外，改动后需重装原生包才生效。
 
 ```bash
 npm run android    # 需要 Android SDK / 真机

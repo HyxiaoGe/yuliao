@@ -9,7 +9,19 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hyxiaoge.yuliao",
-      "appleTeamId": "Y4YD7L3QFB"
+      "appleTeamId": "Y4YD7L3QFB",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSAllowsLocalNetworking": true,
+          "NSExceptionDomains": {
+            "dev.seanfield.org": {
+              "NSIncludesSubdomains": true,
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
