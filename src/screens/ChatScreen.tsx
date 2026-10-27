@@ -227,7 +227,10 @@ export function ChatScreen() {
               {loadingMessages ? (
                 <ActivityIndicator />
               ) : (
-                <Text style={styles.emptyText}>按住下方「按住 说话」开口说，松开直接发送；上滑到左上取消，右上转文字编辑。</Text>
+                <>
+                  <Text style={styles.welcomeTitle}>你好，我是语聊</Text>
+                  <Text style={styles.emptyText}>想聊点什么？按住下方说话就行。</Text>
+                </>
               )}
             </View>
           }
@@ -287,6 +290,7 @@ const styles = StyleSheet.create({
   listContent: { paddingVertical: 8, flexGrow: 1 },
   // inverted 列表里空态会被翻转，再翻回来
   empty: { flex: 1, transform: [{ scaleY: -1 }], alignItems: 'center', justifyContent: 'center', padding: 32 },
+  welcomeTitle: { color: '#1A1A1A', fontSize: 22, fontWeight: '600', marginBottom: 10 },
   emptyText: { color: '#8A8A8E', fontSize: 15, textAlign: 'center', lineHeight: 22 },
   toast: {
     alignSelf: 'center',
