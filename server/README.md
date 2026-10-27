@@ -39,6 +39,13 @@ docker run -d --name yuliao-server -p 8787:8787 --env-file .env --restart unless
 
 或用 `docker-compose.yml`（.env 放同目录）：`docker compose up -d`。
 
+## 部署（dev 服务器）
+
+- 目录 `~/project/yuliao`，容器名 `yuliao-server`，宿主端口 8787，接入 `middleware_default`
+- 推送到 main 且改动涉及 `server/**` 时，GitHub Actions self-hosted runner 自动 `docker compose up -d --build`
+- 内网域名 `http://yuliao.dev.seanfield.org`（nginx-proxy 反代，已关 buffering 以支持 SSE），App 填 `…/v1`
+- Uptime Kuma 探活 `/healthz`
+
 ## 已验证
 
 - 鉴权、限流、参数校验、模型白名单

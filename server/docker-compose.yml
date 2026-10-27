@@ -7,3 +7,13 @@ services:
     env_file: .env
     ports:
       - "8787:8787"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - middleware_default
+
+networks:
+  middleware_default:
+    external: true

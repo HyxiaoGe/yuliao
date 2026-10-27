@@ -1,0 +1,27 @@
+name: Deploy server to Dev
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "server/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: |
+          cd ~/project/yuliao
+          git pull
+          cd server
+          docker compose up -d --build
+          docker image prune -f
+      - name: Health check
+        run: |
+          for i in $(seq 1 15); do
+            if docker exec yuliao-server wget -qO- http://127.0.0.1:8787/healthz >/dev/null 2>&1; then echo healthy; exit 0; fi
+            sleep 2
+          done
+          docker logs --tail 50 yuliao-server; exit 1
