@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Composer } from '../components/Composer';
+import { Composer, type InputMode } from '../components/Composer';
 import { ConversationList } from '../components/ConversationList';
 import { MessageBubble } from '../components/MessageBubble';
-import { useHoldToTalk } from '../hooks/useHoldToTalk';
+import { VoiceOverlay } from '../components/VoiceOverlay';
+import type { TalkZone } from '../components/VoiceBar';
+import { useHoldToTalk, type TalkIntent } from '../hooks/useHoldToTalk';
 import { assertLlmConfigured } from '../config';
 import { api } from '../services/api';
 import { localId, type Conversation, type Message } from '../types';
@@ -17,9 +19,13 @@ export function ChatScreen() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [listVisible, setListVisible] = useState(false);
   const [input, setInput] = useState('');
+  const [inputMode, setInputMode] = useState<InputMode>('voice');
+  const [talkZone, setTalkZone] = useState<TalkZone>('none');
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  /** 与 sending 同步的 ref，供语音松手回调里判断（回调不随 state 重建） */
+  const sendingRef = useRef(false);
   /** 按下说话时输入框里已有的文字，识别结果追加在其后 */
   const draftBaseRef = useRef('');
 
@@ -28,16 +34,23 @@ export function ChatScreen() {
     setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 3000);
   }, []);
 
-  const talk = useHoldToTalk({
-    onInterim: (text) => setInput(joinDraft(draftBaseRef.current, text)),
-    onFinal: (text) => setInput(joinDraft(draftBaseRef.current, text)),
-    onError: showToast,
-  });
+  // 松手直接发送；上滑到"编辑"区松手则填入输入框并切到键盘模式
+  const sendTextRef = useRef<(raw: string, clearInput: boolean) => Promise<void>>(async () => {});
+  const onTalkFinal = useCallback((text: string, intent: TalkIntent) => {
+    if (intent === 'send') {
+      sendTextRef.current(text, false);
+      return;
+    }
+    setInput(joinDraft(draftBaseRef.current, text));
+    setInputMode('keyboard');
+  }, []);
+  const talk = useHoldToTalk({ onFinal: onTalkFinal, onError: showToast });
   const { pressIn: talkPressIn } = talk;
   const onTalkPressIn = useCallback(() => {
     draftBaseRef.current = input;
     talkPressIn();
   }, [input, talkPressIn]);
+  const talkProps = useMemo(() => ({ ...talk, pressIn: onTalkPressIn }), [talk, onTalkPressIn]);
 
   const refreshConversations = useCallback(async () => {
     const list = await api.listConversations();
@@ -113,17 +126,18 @@ export function ChatScreen() {
     [currentId, showToast],
   );
 
-  const send = useCallback(async () => {
-    const text = input.trim();
-    if (!text || sending) return;
+  const sendText = useCallback(async (raw: string, clearInput: boolean) => {
+    const text = raw.trim();
+    if (!text || sendingRef.current) return;
     const configError = assertLlmConfigured();
     if (configError) {
       showToast(configError);
       return;
     }
 
+    sendingRef.current = true;
     setSending(true);
-    setInput('');
+    if (clearInput) setInput('');
     const userMsg: Message = { id: localId(), role: 'user', content: text };
     const assistantId = localId();
     setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', streaming: true }]);
@@ -170,11 +184,16 @@ export function ChatScreen() {
       if (aborted) setMessages((prev) => prev.map((m) => (m.id === assistantId && !m.content ? { ...m, error: '已停止' } : m)));
     } finally {
       abortRef.current = null;
+      sendingRef.current = false;
       setSending(false);
       refreshConversations().catch(() => {});
     }
-  }, [input, sending, currentId, showToast, refreshConversations]);
+  }, [currentId, showToast, refreshConversations]);
 
+  useEffect(() => {
+    sendTextRef.current = sendText;
+  }, [sendText]);
+  const send = useCallback(() => sendText(input, true), [sendText, input]);
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   const reversed = useMemo(() => [...messages].reverse(), [messages]);
@@ -207,7 +226,7 @@ export function ChatScreen() {
               {loadingMessages ? (
                 <ActivityIndicator />
               ) : (
-                <Text style={styles.emptyText}>按住下方按钮说话，松开后文字会填入输入框，确认后点发送。</Text>
+                <Text style={styles.emptyText}>按住下方「按住 说话」开口说，松开直接发送；上滑到左上取消，右上转文字编辑。</Text>
               )}
             </View>
           }
@@ -218,17 +237,19 @@ export function ChatScreen() {
           </View>
         ) : null}
         <Composer
+          mode={inputMode}
+          onModeChange={setInputMode}
           value={input}
           onChangeText={setInput}
           onSend={send}
           onStop={stop}
           sending={sending}
-          talkState={talk.state}
-          onTalkPressIn={onTalkPressIn}
-          onTalkPressOut={talk.pressOut}
+          talk={talkProps}
+          onZoneChange={setTalkZone}
           bottomInset={insets.bottom}
         />
       </KeyboardAvoidingView>
+      <VoiceOverlay state={talk.state} transcript={talk.transcript} volume={talk.volume} zone={talkZone} />
       <ConversationList
         visible={listVisible}
         conversations={conversations}

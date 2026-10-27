@@ -16,6 +16,8 @@ export type AsrListener = {
   onError: (message: string) => void;
   /** 识别会话结束（无论成功或失败都会触发） */
   onEnd: () => void;
+  /** 输入音量，已归一化到 0..1 */
+  onVolume?: (level: number) => void;
 };
 
 export interface Asr {
@@ -50,6 +52,10 @@ class DeviceAsr implements Asr {
         this.detach();
         listener.onEnd();
       }),
+      ExpoSpeechRecognitionModule.addListener('volumechange', (e: { value: number }) => {
+        // 库给的范围是 -2..10，0 以下视为无声
+        listener.onVolume?.(Math.max(0, Math.min(1, e.value / 10)));
+      }),
     );
     ExpoSpeechRecognitionModule.start({
       lang: config.asrLang,
@@ -57,6 +63,7 @@ class DeviceAsr implements Asr {
       continuous: true,
       addsPunctuation: true,
       iosTaskHint: 'dictation',
+      volumeChangeEventOptions: { enabled: true, intervalMillis: 80 },
     });
   }
 
