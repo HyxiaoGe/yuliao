@@ -33,3 +33,26 @@ test('role 开头块和空 content 返回 null，error 字段抛错', () => {
   assert.equal(extractDelta('not json'), null);
   assert.throws(() => extractDelta(JSON.stringify({ error: { message: 'bad key' } })), /bad key/);
 });
+
+test('extractSources 只取 url_citation，丢弃空 url，无 title 时用 url 顶替', () => {
+  const payload = JSON.stringify({
+    choices: [
+      {
+        delta: {
+          annotations: [
+            { type: 'url_citation', url_citation: { title: '空', url: '' } },
+            { type: 'url_citation', url_citation: { title: '气象局', url: 'http://a.cn/x' } },
+            { type: 'url_citation', url_citation: { url: 'https://b.cn/' } },
+            { type: 'other', url_citation: { title: 'x', url: 'https://c.cn/' } },
+          ],
+        },
+      },
+    ],
+  });
+  assert.deepEqual(extractSources(payload), [
+    { title: '气象局', url: 'http://a.cn/x' },
+    { title: 'https://b.cn/', url: 'https://b.cn/' },
+  ]);
+  assert.deepEqual(extractSources('data'), []);
+  assert.deepEqual(extractSources(JSON.stringify({ choices: [], usage: {} })), []);
+});

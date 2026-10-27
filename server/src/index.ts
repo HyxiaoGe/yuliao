@@ -100,8 +100,10 @@ async function handleSendMessage(ctx: Ctx, conversationId: string) {
   const arkBody: ArkChatRequest = {
     model,
     stream: true,
+    stream_options: { include_usage: true },
     thinking: { type: thinking },
     messages: [{ role: 'system', content: cfg.systemPrompt }, ...history, { role: 'user', content }],
+    ...(cfg.webSearch ? { web_search_options: {} } : {}),
   };
 
   const started = Date.now();
@@ -166,7 +168,7 @@ async function handleSendMessage(ctx: Ctx, conversationId: string) {
 
   const aborted = upstreamAbort.signal.aborted;
   if (acc.text) {
-    await insertMessage(db, conversationId, 'assistant', acc.text);
+    await insertMessage(db, conversationId, 'assistant', acc.text, acc.sources);
     await touchConversation(db, conversationId, null);
   }
   if (streamError) {
@@ -176,7 +178,7 @@ async function handleSendMessage(ctx: Ctx, conversationId: string) {
     res.end();
   }
   console.log(
-    `[chat] token=${tokenId} conv=${conversationId.slice(0, 8)} model=${model} ctx=${history.length + 1} reply=${acc.text.length}ch ${Date.now() - started}ms${aborted ? ' (client aborted)' : ''}`,
+    `[chat] token=${tokenId} conv=${conversationId.slice(0, 8)} model=${model} ctx=${history.length + 1} reply=${acc.text.length}ch search=${acc.searchCount} sources=${acc.sources.length} ${Date.now() - started}ms${aborted ? ' (client aborted)' : ''}`,
   );
 }
 

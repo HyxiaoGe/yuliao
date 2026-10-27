@@ -7,7 +7,10 @@ export type ArkChatRequest = {
   model: string;
   messages: ChatTurn[];
   stream: true;
+  stream_options?: { include_usage: boolean };
   thinking: { type: 'enabled' | 'disabled' };
+  /** 方舟 Chat API 的联网搜索开关（豆包搜索 Custom 版），传 {} 即由模型自行判断是否搜索 */
+  web_search_options?: Record<string, never>;
 };
 
 export type SendMessageInput = { content: string; thinking: 'enabled' | 'disabled'; model: string };

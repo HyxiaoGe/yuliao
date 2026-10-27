@@ -202,7 +202,7 @@ export function ChatScreen() {
         convId = conv.id;
         setCurrentId(convId);
       }
-      await api.sendMessage(
+      const result = await api.sendMessage(
         convId,
         text,
         (delta) => {
@@ -212,7 +212,7 @@ export function ChatScreen() {
         },
         controller.signal,
       );
-      finish({});
+      finish({ sources: result.sources.length ? result.sources : null });
       const rest = splitter?.flush();
       if (rest) speak([rest]);
     } catch (err: any) {

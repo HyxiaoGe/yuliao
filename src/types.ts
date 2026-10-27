@@ -1,10 +1,15 @@
 export type Role = 'user' | 'assistant';
 
+/** 联网搜索引用来源 */
+export type Source = { title: string; url: string };
+
 export type Message = {
   /** 服务端消息 id；本地临时消息用 local- 前缀 */
   id: string;
   role: Role;
   content: string;
+  /** 助手回复引用的联网搜索来源；无搜索时为空 */
+  sources?: Source[] | null;
   /** 助手消息流式输出中 */
   streaming?: boolean;
   /** 请求失败时的错误信息 */

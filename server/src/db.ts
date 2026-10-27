@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS messages_conversation_idx ON messages (conversation_id, id);
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS sources jsonb;
 `;
 
 export function createDb(databaseUrl: string): Db {
@@ -32,7 +33,9 @@ export async function migrate(db: Db): Promise<void> {
 }
 
 export type ConversationRow = { id: string; title: string | null; created_at: string; updated_at: string; last_message: string | null };
-export type MessageRow = { id: string; role: 'user' | 'assistant'; content: string; created_at: string };
+export type Source = { title: string; url: string };
+/** sources：助手回复引用的联网搜索来源；用户消息和未搜索的回复为 null */
+export type MessageRow = { id: string; role: 'user' | 'assistant'; content: string; sources: Source[] | null; created_at: string };
 
 export async function listConversations(db: Db, deviceId: string, limit = 50): Promise<ConversationRow[]> {
   const { rows } = await db.query<ConversationRow>(
@@ -72,8 +75,8 @@ export async function deleteConversation(db: Db, deviceId: string, id: string): 
 
 export async function listMessages(db: Db, conversationId: string, limit = 500): Promise<MessageRow[]> {
   const { rows } = await db.query<MessageRow>(
-    `SELECT id::text, role, content, created_at FROM (
-       SELECT id, role, content, created_at FROM messages WHERE conversation_id = $1 ORDER BY id DESC LIMIT $2
+    `SELECT id::text, role, content, sources, created_at FROM (
+       SELECT id, role, content, sources, created_at FROM messages WHERE conversation_id = $1 ORDER BY id DESC LIMIT $2
      ) t ORDER BY id ASC`,
     [conversationId, limit],
   );
@@ -86,11 +89,17 @@ export async function recentTurns(db: Db, conversationId: string, limit: number)
   return rows.map((r) => ({ role: r.role, content: r.content }));
 }
 
-export async function insertMessage(db: Db, conversationId: string, role: 'user' | 'assistant', content: string): Promise<MessageRow> {
+export async function insertMessage(
+  db: Db,
+  conversationId: string,
+  role: 'user' | 'assistant',
+  content: string,
+  sources: Source[] | null = null,
+): Promise<MessageRow> {
   const { rows } = await db.query<MessageRow>(
-    `INSERT INTO messages (conversation_id, role, content) VALUES ($1, $2, $3)
-     RETURNING id::text, role, content, created_at`,
-    [conversationId, role, content],
+    `INSERT INTO messages (conversation_id, role, content, sources) VALUES ($1, $2, $3, $4)
+     RETURNING id::text, role, content, sources, created_at`,
+    [conversationId, role, content, sources && sources.length ? JSON.stringify(sources) : null],
   );
   return rows[0];
 }

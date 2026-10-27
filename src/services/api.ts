@@ -1,8 +1,8 @@
 import { fetch } from 'expo/fetch';
 import { config } from '../config';
 import { getDeviceId } from './device';
-import { SseLineBuffer, extractDelta } from './sse';
-import type { Conversation, Message } from '../types';
+import { SseLineBuffer, extractDelta, extractSources } from './sse';
+import type { Conversation, Message, Source } from '../types';
 
 /** 与 server/ 的约定：所有接口在 /v1 下，鉴权用 App token + X-Device-Id */
 function headers(extra: Record<string, string> = {}): Record<string, string> {
@@ -35,9 +35,14 @@ export const api = {
 
   /**
    * 发送一条消息并流式接收回复。服务器负责落库和拼接上下文。
-   * @returns 完整回复文本
+   * @returns 完整回复文本与联网搜索引用来源（按 url 去重）
    */
-  async sendMessage(conversationId: string, content: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<string> {
+  async sendMessage(
+    conversationId: string,
+    content: string,
+    onDelta: (delta: string) => void,
+    signal?: AbortSignal,
+  ): Promise<{ text: string; sources: Source[] }> {
     const resp = await fetch(`${config.chatBaseUrl}/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
@@ -55,6 +60,7 @@ export const api = {
     const decoder = new TextDecoder();
     const lines = new SseLineBuffer();
     let full = '';
+    const sources: Source[] = [];
     const consume = (payloads: string[]) => {
       for (const p of payloads) {
         const delta = extractDelta(p);
@@ -62,6 +68,7 @@ export const api = {
           full += delta;
           onDelta(delta);
         }
+        for (const s of extractSources(p)) if (!sources.some((x) => x.url === s.url)) sources.push(s);
       }
     };
     while (true) {
@@ -70,7 +77,7 @@ export const api = {
       consume(lines.push(decoder.decode(value, { stream: true })));
     }
     consume(lines.flush());
-    return full;
+    return { text: full, sources };
   },
 };
 

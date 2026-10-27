@@ -13,6 +13,8 @@ function list(name: string): string[] {
     .filter(Boolean);
 }
 
+const DEFAULT_SYSTEM_PROMPT = '你是一个友好、简洁的中文聊天助手。涉及最新动态、实时信息或你不确定的事实时，先联网搜索再回答。';
+
 export function loadConfig() {
   const arkApiKey = process.env.ARK_API_KEY ?? '';
   const appTokens = list('APP_TOKENS');
@@ -26,7 +28,9 @@ export function loadConfig() {
     databaseUrl,
     /** 发给模型的最近消息条数（用户+助手） */
     historyLimit: num('HISTORY_LIMIT', 20),
-    systemPrompt: process.env.SYSTEM_PROMPT || '你是一个友好、简洁的中文聊天助手。',
+    systemPrompt: process.env.SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT,
+    /** 豆包搜索 Custom 版联网搜索（需在方舟控制台开通组件）；WEB_SEARCH=0 关闭 */
+    webSearch: process.env.WEB_SEARCH !== '0',
     arkApiKey,
     arkBaseUrl: (process.env.ARK_BASE_URL ?? 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/+$/, ''),
     arkModel: process.env.ARK_MODEL ?? 'doubao-seed-2-0-mini-260428',
