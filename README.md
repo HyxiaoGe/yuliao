@@ -10,13 +10,14 @@
 App.tsx                      入口
 src/config.ts                环境变量与常量
 src/types.ts                 消息类型
-src/services/llm.ts          豆包流式调用（OpenAI 兼容 SSE）
+src/services/api.ts          后端接口：对话列表/消息/流式发送
+src/services/device.ts       设备 ID（首次生成，存 Documents 目录，服务端按它归属对话）
 src/services/sse.ts          SSE 行解析（纯函数，有单测）
 src/services/asr.ts          语音识别抽象 + 设备端实现（后续接豆包 ASR 在这里换实现）
 src/hooks/useHoldToTalk.ts   按住说话状态机
-src/components/              消息气泡、按住说话按钮、输入区
-src/screens/ChatScreen.tsx   聊天页
-server/                      轻量后端：持有方舟 Key，转发流式请求（见 server/README.md）
+src/components/              消息气泡、按住说话按钮、输入区、历史对话列表
+src/screens/ChatScreen.tsx   聊天页（历史 / 新对话 / 流式回复）
+server/                      后端：持有方舟 Key，对话与消息存 Postgres，流式转发（见 server/README.md）
 ```
 
 ## 配置
@@ -27,7 +28,7 @@ cp .env.example .env.local
 ```
 
 `EXPO_PUBLIC_*` 都会打进客户端包，所以 App 里只放后端地址和 App token，方舟 Key 只存在于 `server/.env`。
-仅本地调试时可直连方舟：BASE_URL 填方舟地址，TOKEN 填方舟 Key，并填 `EXPO_PUBLIC_CHAT_MODEL`。
+App 只和自己的后端通信，不再支持直连方舟。
 
 真实值只能写在 `.env.local`，不要写进 `.env.example`（后者会提交到仓库）。
 
@@ -86,4 +87,6 @@ npm test
 
 - 设备端识别依赖系统能力：iOS 用 SFSpeechRecognizer，Android 依赖 Google 语音服务，国内部分安卓机可能不可用，这也是后续接豆包 ASR 的动机。
 - 中间识别结果会实时覆盖进输入框，按下时输入框已有的文字会保留并追加。
-- 对话上下文只带最近 20 条消息，不做持久化，杀掉 App 即清空。
+- 对话和消息存在服务端 Postgres，按设备 ID 归属；卸载重装会生成新设备 ID，旧对话不再可见（数据仍在服务端，做登录后可迁移）。
+- 模型上下文由服务端取最近 20 条消息拼接（`HISTORY_LIMIT`），App 不再发送历史。
+- 离线时无法查看历史（没有本地缓存）。

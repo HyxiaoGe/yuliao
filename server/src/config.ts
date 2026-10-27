@@ -16,11 +16,17 @@ function list(name: string): string[] {
 export function loadConfig() {
   const arkApiKey = process.env.ARK_API_KEY ?? '';
   const appTokens = list('APP_TOKENS');
+  const databaseUrl = process.env.DATABASE_URL ?? '';
   if (!arkApiKey) throw new Error('缺少 ARK_API_KEY');
   if (appTokens.length === 0) throw new Error('缺少 APP_TOKENS，至少配置一个 App 鉴权 token');
+  if (!databaseUrl) throw new Error('缺少 DATABASE_URL');
 
   return {
     port: num('PORT', 8787),
+    databaseUrl,
+    /** 发给模型的最近消息条数（用户+助手） */
+    historyLimit: num('HISTORY_LIMIT', 20),
+    systemPrompt: process.env.SYSTEM_PROMPT || '你是一个友好、简洁的中文聊天助手。',
     arkApiKey,
     arkBaseUrl: (process.env.ARK_BASE_URL ?? 'https://ark.cn-beijing.volces.com/api/v3').replace(/\/+$/, ''),
     arkModel: process.env.ARK_MODEL ?? 'doubao-seed-2-0-mini-260428',

@@ -1,9 +1,7 @@
 /**
  * 运行时配置。所有值来自 EXPO_PUBLIC_* 环境变量（.env.local）。
- *
- * 聊天接口是 OpenAI 兼容的 Chat Completions，有两种接法：
- * - 走自己的后端（推荐）：CHAT_BASE_URL 指向 server/ 部署地址（…/v1），CHAT_TOKEN 填后端的 APP_TOKENS 之一
- * - 直连火山方舟（仅本地调试）：CHAT_BASE_URL 指向方舟，CHAT_TOKEN 填方舟 API Key。Key 会打进客户端包，不要用于分发的版本
+ * App 只和 server/ 通信：CHAT_BASE_URL 指向其部署地址（…/v1），CHAT_TOKEN 填后端 APP_TOKENS 之一。
+ * 对话历史、上下文拼接和系统提示词都在服务端。
  */
 export const config = {
   chatBaseUrl: (process.env.EXPO_PUBLIC_CHAT_BASE_URL ?? '').replace(/\/+$/, ''),
@@ -17,9 +15,6 @@ export const config = {
   chatThinking: process.env.EXPO_PUBLIC_CHAT_THINKING === '1',
   /** 语音识别语言 */
   asrLang: 'zh-CN',
-  /** 发送给模型的最近消息条数（含用户和助手），控制上下文长度 */
-  historyLimit: 20,
-  systemPrompt: '你是一个友好、简洁的中文聊天助手。',
 } as const;
 
 export function assertLlmConfigured(): string | null {

@@ -2,46 +2,54 @@ import type { Config } from './config.ts';
 
 export type ChatTurn = { role: 'system' | 'user' | 'assistant'; content: string };
 
-export type ChatRequest = {
+/** 发往方舟的请求体 */
+export type ArkChatRequest = {
   model: string;
   messages: ChatTurn[];
-  stream: boolean;
+  stream: true;
   thinking: { type: 'enabled' | 'disabled' };
 };
 
-const ROLES = new Set(['system', 'user', 'assistant']);
+export type SendMessageInput = { content: string; thinking: 'enabled' | 'disabled'; model: string };
 
-/**
- * 校验并规范化客户端请求体。只放行我们认识的字段，模型按白名单决定，
- * 其余参数一律丢弃，避免客户端随意透传参数到方舟。
- */
-export function validateChatRequest(
+const DEVICE_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isValidDeviceId(v: unknown): v is string {
+  return typeof v === 'string' && DEVICE_ID_RE.test(v);
+}
+
+export function isUuid(v: unknown): v is string {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
+
+/** 校验"发送一条消息"的请求体。模型按白名单决定，其余参数一律丢弃。 */
+export function validateSendMessage(
   body: unknown,
-  cfg: Pick<Config, 'arkModel' | 'allowedModels' | 'maxMessages' | 'maxChars'>,
-): { ok: true; value: ChatRequest } | { ok: false; error: string } {
+  cfg: Pick<Config, 'arkModel' | 'allowedModels' | 'maxChars'>,
+): { ok: true; value: SendMessageInput } | { ok: false; error: string } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { ok: false, error: '请求体必须是 JSON 对象' };
   const b = body as Record<string, unknown>;
-
-  if (!Array.isArray(b.messages) || b.messages.length === 0) return { ok: false, error: 'messages 必须是非空数组' };
-  if (b.messages.length > cfg.maxMessages) return { ok: false, error: `messages 最多 ${cfg.maxMessages} 条` };
-
-  const messages: ChatTurn[] = [];
-  let chars = 0;
-  for (const m of b.messages) {
-    if (!m || typeof m !== 'object') return { ok: false, error: 'messages 元素必须是对象' };
-    const { role, content } = m as Record<string, unknown>;
-    if (typeof role !== 'string' || !ROLES.has(role)) return { ok: false, error: `不支持的 role: ${String(role)}` };
-    if (typeof content !== 'string') return { ok: false, error: 'content 必须是字符串' };
-    chars += content.length;
-    messages.push({ role: role as ChatTurn['role'], content });
-  }
-  if (chars > cfg.maxChars) return { ok: false, error: `消息总长度不能超过 ${cfg.maxChars} 字符` };
-
+  if (typeof b.content !== 'string' || !b.content.trim()) return { ok: false, error: 'content 必须是非空字符串' };
+  if (b.content.length > cfg.maxChars) return { ok: false, error: `content 不能超过 ${cfg.maxChars} 字符` };
   const model = typeof b.model === 'string' && cfg.allowedModels.has(b.model) ? b.model : cfg.arkModel;
-
   // 深度思考默认关闭：聊天场景首字快 3 倍以上；客户端显式传 enabled 才开启
   const thinking = b.thinking as Record<string, unknown> | undefined;
   const thinkingType = thinking && typeof thinking === 'object' && thinking.type === 'enabled' ? 'enabled' : 'disabled';
-  const out: ChatRequest = { model, messages, stream: b.stream !== false, thinking: { type: thinkingType } };
-  return { ok: true, value: out };
+  return { ok: true, value: { content: b.content.trim(), thinking: thinkingType, model } };
+}
+
+export function validateCreateConversation(body: unknown): { ok: true; title: string | null } | { ok: false; error: string } {
+  if (body === undefined || body === null) return { ok: true, title: null };
+  if (typeof body !== 'object' || Array.isArray(body)) return { ok: false, error: '请求体必须是 JSON 对象' };
+  const t = (body as Record<string, unknown>).title;
+  if (t === undefined || t === null) return { ok: true, title: null };
+  if (typeof t !== 'string') return { ok: false, error: 'title 必须是字符串' };
+  const title = t.trim().slice(0, 60);
+  return { ok: true, title: title || null };
+}
+
+/** 用首条用户消息生成标题 */
+export function titleFromContent(content: string): string {
+  return content.replace(/\s+/g, ' ').trim().slice(0, 30);
 }
