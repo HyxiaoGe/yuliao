@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { VoiceBar, type TalkZone } from './VoiceBar';
+import { KeyboardIcon, MicIcon, SendIcon, StopIcon } from './Icons';
 import type { TalkIntent, TalkState } from '../hooks/useHoldToTalk';
 
 export type InputMode = 'keyboard' | 'voice';
@@ -42,7 +43,7 @@ export function Composer({ mode, onModeChange, value, onChangeText, onSend, onSt
           style={[styles.modeBtn, talking && styles.disabled]}
           accessibilityLabel={mode === 'voice' ? '切换到键盘输入' : '切换到语音输入'}
         >
-          <Text style={styles.modeIcon}>{mode === 'voice' ? '⌨️' : '🎤'}</Text>
+          {mode === 'voice' ? <KeyboardIcon /> : <MicIcon />}
         </Pressable>
 
         {mode === 'voice' ? (
@@ -69,11 +70,11 @@ export function Composer({ mode, onModeChange, value, onChangeText, onSend, onSt
 
         {sending ? (
           <Pressable onPress={onStop} style={[styles.sendBtn, styles.stopBtn]} accessibilityLabel="停止生成">
-            <Text style={styles.sendText}>停止</Text>
+            <StopIcon />
           </Pressable>
         ) : mode === 'keyboard' || hasDraft ? (
           <Pressable onPress={onSend} disabled={!canSend} style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]} accessibilityLabel="发送">
-            <Text style={styles.sendText}>发送</Text>
+            <SendIcon />
           </Pressable>
         ) : null}
       </View>
@@ -100,7 +101,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D0D0D5',
   },
-  modeIcon: { fontSize: 20 },
   disabled: { opacity: 0.5 },
   input: {
     flex: 1,
@@ -116,14 +116,13 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   sendBtn: {
+    width: 40,
     height: 40,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     backgroundColor: '#1E6FFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendBtnDisabled: { backgroundColor: '#B9CCF5' },
   stopBtn: { backgroundColor: '#D7263D' },
-  sendText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
 });

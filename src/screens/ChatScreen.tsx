@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Composer, type InputMode } from '../components/Composer';
 import { ConversationDrawer } from '../components/ConversationDrawer';
-import { MenuIcon, NewChatIcon } from '../components/Icons';
+import { MenuIcon, NewChatIcon, SpeakerOffIcon, SpeakerOnIcon } from '../components/Icons';
 import { MessageBubble } from '../components/MessageBubble';
 import { VoiceOverlay } from '../components/VoiceOverlay';
 import type { TalkZone } from '../components/VoiceBar';
@@ -242,18 +242,22 @@ export function ChatScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <Pressable onPress={() => setListVisible(true)} hitSlop={12} style={styles.headerBtn} accessibilityLabel="历史对话">
-          <MenuIcon />
-        </Pressable>
+        <View style={styles.headerLeft}>
+          <Pressable onPress={() => setListVisible(true)} hitSlop={12} style={styles.headerBtn} accessibilityLabel="历史对话">
+            <MenuIcon />
+          </Pressable>
+        </View>
         <Text style={styles.title} numberOfLines={1}>
           {currentTitle}
         </Text>
+        <View style={styles.headerRight}>
         <Pressable onPress={toggleAutoRead} hitSlop={12} style={styles.headerBtn} accessibilityLabel={autoRead ? '关闭自动朗读' : '开启自动朗读'}>
-          <Text style={styles.headerEmoji}>{autoRead ? '🔊' : '🔇'}</Text>
+          {autoRead ? <SpeakerOnIcon color="#1E6FFF" /> : <SpeakerOffIcon color="#8A8A8E" />}
         </Pressable>
         <Pressable onPress={newConversation} hitSlop={12} style={[styles.headerBtn, styles.headerBtnRight]} disabled={sending} accessibilityLabel="新对话">
           <NewChatIcon color={sending ? '#B0B0B5' : '#1A1A1A'} />
         </Pressable>
+        </View>
       </View>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
@@ -326,9 +330,10 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 12,
   },
-  headerBtn: { width: 44, height: 32, justifyContent: 'center' },
-  headerEmoji: { fontSize: 20, textAlign: 'center' },
+  headerBtn: { width: 44, height: 32, justifyContent: 'center', alignItems: 'center' },
   headerBtnRight: { alignItems: 'flex-end' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', width: 88, justifyContent: 'flex-end' },
+  headerLeft: { width: 88, flexDirection: 'row' },
   title: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', color: '#1A1A1A' },
   listContent: { paddingVertical: 8, flexGrow: 1 },
   // inverted 列表里空态会被翻转，再翻回来
