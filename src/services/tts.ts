@@ -16,16 +16,23 @@ class SpeechQueue {
   private playing = false;
   /** 每次 stop() 递增，用来丢弃过期的异步结果 */
   private generation = 0;
-  private modeReady = false;
   private listeners = new Set<(speaking: boolean) => void>();
 
   /** 启动时预热音频会话和播放器，避免第一句才初始化 */
   async warmUp() {
-    if (!this.modeReady) {
-      this.modeReady = true;
-      await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'duckOthers' }).catch(() => {});
+    await this.applyPlaybackMode();
+    if (!this.player) {
+      this.player = createAudioPlayer(null, { updateInterval: 250 });
+      this.player.volume = 1;
     }
-    if (!this.player) this.player = createAudioPlayer(null, { updateInterval: 250 });
+  }
+
+  /**
+   * 切回纯播放会话。语音识别会把 iOS 音频会话设成 playAndRecord + measurement，
+   * 识别结束后仍留在该状态，扬声器输出会明显偏小，所以每轮播放前都重新设置一次。
+   */
+  private applyPlaybackMode() {
+    return setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false, interruptionMode: 'duckOthers' }).catch(() => {});
   }
 
   /** 记录一轮回复的起点，用于打印首句音频延迟 */
@@ -95,6 +102,7 @@ class SpeechQueue {
     const gen = this.generation;
     try {
       await this.warmUp();
+      await this.applyPlaybackMode();
       while (this.queue.length && gen === this.generation) {
         const item = this.queue.shift()!;
         const file = await item.file;
