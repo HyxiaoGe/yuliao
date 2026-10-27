@@ -87,9 +87,10 @@ export function ChatScreen() {
     [showToast],
   );
 
-  // 启动：拉对话列表，打开最近一个
+  // 启动：预热播放器，拉对话列表，打开最近一个
   useEffect(() => {
     let cancelled = false;
+    speech.warmUp().catch(() => {});
     (async () => {
       try {
         const configError = assertLlmConfigured();
@@ -163,6 +164,7 @@ export function ChatScreen() {
     setSending(true);
     if (clearInput) setInput('');
     speech.stop();
+    speech.markStart();
     const splitter = autoReadRef.current ? new SentenceSplitter() : null;
     const speak = (sentences: string[]) => {
       for (const sen of sentences) {

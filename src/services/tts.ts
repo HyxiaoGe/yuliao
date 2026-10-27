@@ -19,6 +19,23 @@ class SpeechQueue {
   private modeReady = false;
   private listeners = new Set<(speaking: boolean) => void>();
 
+  /** 启动时预热音频会话和播放器，避免第一句才初始化 */
+  async warmUp() {
+    if (!this.modeReady) {
+      this.modeReady = true;
+      await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'duckOthers' }).catch(() => {});
+    }
+    if (!this.player) this.player = createAudioPlayer(null, { updateInterval: 250 });
+  }
+
+  /** 记录一轮回复的起点，用于打印首句音频延迟 */
+  markStart() {
+    this.startedAt = Date.now();
+    this.firstPlayed = false;
+  }
+  private startedAt = 0;
+  private firstPlayed = false;
+
   onChange(fn: (speaking: boolean) => void) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
@@ -77,10 +94,7 @@ class SpeechQueue {
     this.setPlaying(true);
     const gen = this.generation;
     try {
-      if (!this.modeReady) {
-        this.modeReady = true;
-        await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'duckOthers' }).catch(() => {});
-      }
+      await this.warmUp();
       while (this.queue.length && gen === this.generation) {
         const item = this.queue.shift()!;
         const file = await item.file;
@@ -106,6 +120,10 @@ class SpeechQueue {
       try {
         player.replace({ uri: file.uri });
         player.play();
+        if (!this.firstPlayed && this.startedAt) {
+          this.firstPlayed = true;
+          console.log(`[tts] first audio after ${Date.now() - this.startedAt}ms`);
+        }
       } catch (e) {
         console.warn('[tts] play failed', e);
         sub.remove();
