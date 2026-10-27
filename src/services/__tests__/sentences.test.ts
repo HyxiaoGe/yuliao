@@ -48,3 +48,9 @@ test('短句不在逗号切', () => {
 test('stripForSpeech 去掉 Markdown', () => {
   assert.equal(stripForSpeech('**重点**：见 [文档](https://x.y)\n- 第一项\n`code`'), '重点：见 文档\n第一项\ncode');
 });
+
+test('stripForSpeech 只有标点或表情时返回空串', () => {
+  assert.equal(stripForSpeech('😊'), '');
+  assert.equal(stripForSpeech('……'), '');
+  assert.equal(stripForSpeech('好的👌'), '好的👌');
+});

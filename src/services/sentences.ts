@@ -51,9 +51,9 @@ function hasSoftBefore(buf: string, from: number, to: number): boolean {
   return buf.slice(from - 1, to).search(SOFT) !== -1;
 }
 
-/** 去掉 Markdown 符号和链接，只留给人听的文字 */
+/** 去掉 Markdown 符号和链接，只留给人听的文字；没有可读字符（只有标点、表情）时返回空串 */
 export function stripForSpeech(text: string): string {
-  return text
+  const t = text
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]*)`/g, '$1')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
@@ -64,4 +64,5 @@ export function stripForSpeech(text: string): string {
     .replace(/https?:\/\/\S+/g, '链接')
     .replace(/[ \t]+/g, ' ')
     .trim();
+  return /[\p{L}\p{N}]/u.test(t) ? t : '';
 }
